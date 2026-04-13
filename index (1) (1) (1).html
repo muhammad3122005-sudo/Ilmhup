@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IlmHub — Bilim Markazi</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #0c0f0a;
+    --surface: #141910;
+    --card: #1a1f15;
+    --border: #2a3020;
+    --accent: #a8d060;
+    --accent2: #d4f080;
+    --text: #e8edd8;
+    --muted: #7a8a60;
+    --danger: #e05050;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:rgba(12,15,10,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:64px;}
+  .logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--accent2);letter-spacing:-0.5px;}
+  .logo span{color:var(--muted);}
+  .nav-actions{display:flex;gap:0.75rem;align-items:center;}
+  .btn{padding:0.45rem 1.1rem;border-radius:8px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:500;transition:all 0.2s;}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-primary{background:var(--accent);color:#0c0f0a;}
+  .btn-primary:hover{background:var(--accent2);}
+  .user-badge{display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--muted);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#0c0f0a;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;}
+
+  /* HERO SEARCH */
+  .hero{padding:3rem 2rem 2rem;text-align:center;position:relative;}
+  .hero h1{font-family:'Playfair Display',serif;font-size:clamp(2rem,5vw,3.5rem);font-weight:900;line-height:1.1;margin-bottom:0.5rem;}
+  .hero h1 em{font-style:normal;color:var(--accent);}
+  .hero p{color:var(--muted);margin-bottom:2rem;font-size:1rem;}
+  .search-wrap{max-width:640px;margin:0 auto;position:relative;}
+  .search-wrap input{width:100%;padding:0.9rem 1rem 0.9rem 3rem;background:var(--surface);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:1rem;font-family:'DM Sans',sans-serif;outline:none;transition:border 0.2s;}
+  .search-wrap input:focus{border-color:var(--accent);}
+  .search-wrap input::placeholder{color:var(--muted);}
+  .search-icon{position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--muted);}
+
+  /* FILTERS */
+  .filters{display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:center;padding:0 2rem 1.5rem;max-width:900px;margin:0 auto;}
+  .filter-btn{padding:0.35rem 0.9rem;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:0.8rem;cursor:pointer;transition:all 0.18s;font-family:'DM Sans',sans-serif;}
+  .filter-btn.active,.filter-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(168,208,96,0.08);}
+  .filter-sep{width:1px;background:var(--border);margin:0 0.25rem;}
+
+  /* CONTENT GRID */
+  .section{padding:0 2rem 3rem;max-width:1200px;margin:0 auto;}
+  .section-title{font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:1.25rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;}
+  .card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 24px rgba(168,208,96,0.08);}
+  .card-type{display:inline-flex;align-items:center;gap:0.35rem;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;padding:0.2rem 0.6rem;border-radius:999px;margin-bottom:0.75rem;font-weight:600;}
+  .type-pdf{background:rgba(224,80,80,0.15);color:#e08080;}
+  .type-ppt{background:rgba(224,140,60,0.15);color:#e0a060;}
+  .type-mp3{background:rgba(80,180,224,0.15);color:#80c0e0;}
+  .type-link{background:rgba(168,208,96,0.15);color:var(--accent);}
+  .card h3{font-size:0.95rem;font-weight:600;margin-bottom:0.4rem;line-height:1.4;}
+  .card p{font-size:0.8rem;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .card-meta{display:flex;align-items:center;justify-content:space-between;margin-top:1rem;font-size:0.75rem;color:var(--muted);}
+  .card-lang{padding:0.15rem 0.5rem;border:1px solid var(--border);border-radius:4px;}
+  .card-stats{display:flex;gap:0.75rem;}
+  .card-actions{display:flex;gap:0.5rem;margin-top:0.75rem;}
+  .btn-sm{padding:0.3rem 0.75rem;border-radius:6px;border:none;cursor:pointer;font-size:0.75rem;font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.18s;}
+  .btn-view{background:var(--surface);color:var(--text);border:1px solid var(--border);}
+  .btn-view:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-dl{background:var(--accent);color:#0c0f0a;}
+  .btn-dl:hover{background:var(--accent2);}
+  .like-btn{background:transparent;border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;gap:0.3rem;padding:0.3rem 0.6rem;border-radius:6px;cursor:pointer;font-size:0.75rem;transition:all 0.18s;}
+  .like-btn:hover,.like-btn.liked{border-color:#e08080;color:#e08080;}
+
+  /* EMPTY */
+  .empty{text-align:center;padding:4rem 2rem;color:var(--muted);}
+  .empty-icon{font-size:3rem;margin-bottom:1rem;}
+
+  /* MODAL */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:1rem;}
+  .overlay.open{display:flex;}
+  .modal{background:var(--card);border:1px solid var(--border);border-radius:18px;width:100%;max-width:440px;padding:2rem;position:relative;animation:slideUp 0.25s ease;}
+  @keyframes slideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .modal-close{position:absolute;top:1rem;right:1rem;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1.25rem;line-height:1;}
+  .modal h2{font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:1.5rem;}
+  .form-group{margin-bottom:1rem;}
+  .form-group label{display:block;font-size:0.8rem;color:var(--muted);margin-bottom:0.4rem;}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:0.65rem 0.9rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border 0.2s;}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent);}
+  .form-group textarea{resize:vertical;min-height:80px;}
+  .form-group select option{background:var(--card);}
+  .role-picker{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem;}
+  .role-card{border:2px solid var(--border);border-radius:12px;padding:1rem;cursor:pointer;text-align:center;transition:all 0.18s;}
+  .role-card:hover,.role-card.selected{border-color:var(--accent);background:rgba(168,208,96,0.06);}
+  .role-card .icon{font-size:1.75rem;margin-bottom:0.4rem;}
+  .role-card .rname{font-size:0.9rem;font-weight:600;}
+  .role-card .rdesc{font-size:0.72rem;color:var(--muted);margin-top:0.2rem;}
+  .err{color:var(--danger);font-size:0.8rem;margin-top:0.5rem;}
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:1.5rem;}
+  .tab{flex:1;padding:0.6rem;text-align:center;cursor:pointer;font-size:0.875rem;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.18s;}
+  .tab.active{color:var(--accent);border-color:var(--accent);}
+
+  /* FEEDBACK */
+  .feedback-section{background:var(--surface);border-top:1px solid var(--border);padding:3rem 2rem;}
+  .feedback-inner{max-width:600px;margin:0 auto;}
+  .feedback-inner h2{font-family:'Playfair Display',serif;font-size:1.6rem;margin-bottom:0.5rem;}
+  .feedback-inner p{color:var(--muted);font-size:0.9rem;margin-bottom:1.5rem;}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--accent);color:var(--text);padding:0.75rem 1.5rem;border-radius:10px;font-size:0.875rem;z-index:999;animation:fadeIn 0.3s;display:none;}
+  .toast.show{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateX(-50%) translateY(10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+
+  /* AUDIO PLAYER */
+  .audio-player{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1rem;margin-top:0.75rem;display:none;}
+  .audio-player audio{width:100%;height:32px;}
+
+  footer{text-align:center;padding:1.5rem;color:var(--muted);font-size:0.8rem;border-top:1px solid var(--border);}
+
+  /* PDF VIEWER MODAL */
+  .pdf-modal{max-width:90vw;width:900px;max-height:90vh;display:flex;flex-direction:column;}
+  .pdf-modal iframe{flex:1;border:none;border-radius:8px;min-height:70vh;}
+
+  @media(max-width:600px){
+    nav{padding:0 1rem;}
+    .hero{padding:2rem 1rem 1rem;}
+    .section{padding:0 1rem 2rem;}
+    .filters{padding:0 1rem 1rem;}
+    .grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Ilm<span>Hub</span></div>
+  <div class="nav-actions" id="navActions">
+    <button class="btn btn-ghost" onclick="openModal('loginModal')">Kirish</button>
+    <button class="btn btn-primary" onclick="openModal('registerModal')">Ro'yxat</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Barcha bilimlar<br/><em>bir joyda</em></h1>
+  <p>PDF kitoblar, slaytlar, qo'shiqlar va video darsliklar</p>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Mavzu, kitob yoki qo'shiq qidiring..." oninput="handleSearch()"/>
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters">
+  <button class="filter-btn active" data-type="" onclick="setTypeFilter(this,'')">Hammasi</button>
+  <button class="filter-btn" data-type="pdf" onclick="setTypeFilter(this,'pdf')">📄 PDF</button>
+  <button class="filter-btn" data-type="ppt" onclick="setTypeFilter(this,'ppt')">📊 PPT</button>
+  <button class="filter-btn" data-type="mp3" onclick="setTypeFilter(this,'mp3')">🎵 MP3</button>
+  <button class="filter-btn" data-type="link" onclick="setTypeFilter(this,'link')">🔗 Video</button>
+  <div class="filter-sep"></div>
+  <button class="filter-btn active" data-lang="" onclick="setLangFilter(this,'')">Til: Barchasi</button>
+  <button class="filter-btn" data-lang="uz" onclick="setLangFilter(this,'uz')">🇺🇿 O'zbek</button>
+  <button class="filter-btn" data-lang="en" onclick="setLangFilter(this,'en')">🇬🇧 English</button>
+  <button class="filter-btn" data-lang="ru" onclick="setLangFilter(this,'ru')">🇷🇺 Rus</button>
+</div>
+
+<!-- CONTENT -->
+<div class="section">
+  <div class="section-title">Materiallar</div>
+  <div class="grid" id="contentGrid">
+    <div class="empty"><div class="empty-icon">⏳</div><p>Yuklanmoqda...</p></div>
+  </div>
+</div>
+
+<!-- FEEDBACK -->
+<div class="feedback-section">
+  <div class="feedback-inner">
+    <h2>Taklif yuboring</h2>
+    <p>Qanday content qo'shishimni xohlaysiz? Yoki sayt haqida fikringiz bo'lsa yozing.</p>
+    <div class="form-group">
+      <input type="text" id="fbName" placeholder="Ismingiz (ixtiyoriy)"/>
+    </div>
+    <div class="form-group">
+      <textarea id="fbText" placeholder="Xabaringiz..." rows="4"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="submitFeedback()" style="width:100%">Yuborish</button>
+    <div id="fbMsg" class="err" style="color:var(--accent);margin-top:0.5rem;"></div>
+  </div>
+</div>
+
+<footer>© 2025 IlmHub — Bilim hech qachon to'xtamaydi</footer>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN MODAL -->
+<div class="overlay" id="loginModal">
+  <div class="modal" style="max-width:380px;">
+    <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
+    <h2>Kirish</h2>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="email@example.com"/>
+    </div>
+    <div class="form-group">
+      <label>Parol</label>
+      <input type="password" id="loginPass" placeholder="••••••••"/>
+    </div>
+    <div id="loginErr" class="err"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:1rem;" onclick="doLogin()">Kirish</button>
+    <p style="text-align:center;margin-top:1rem;font-size:0.82rem;color:var(--muted);">Akkount yo'qmi? <a href="#" style="color:var(--accent);" onclick="switchModal('loginModal','registerModal')">Ro'yxatdan o'ting</a></p>
+  </div>
+</div>
+
+<!-- REGISTER MODAL -->
+<div class="overlay" id="registerModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('registerModal')">✕</button>
+    <h2>Ro'yxatdan o'tish</h2>
+
+    <div id="roleStep">
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1rem;">Siz kimسن?</p>
+      <div class="role-picker">
+        <div class="role-card selected" id="roleUser" onclick="selectRole('user')">
+          <div class="icon">👤</div>
+          <div class="rname">Foydalanuvchi</div>
+          <div class="rdesc">Materiallarni ko'rish va yuklab olish</div>
+        </div>
+        <div class="role-card" id="roleCreator" onclick="selectRole('creator')">
+          <div class="icon">✍️</div>
+          <div class="rname">Content Creator</div>
+          <div class="rdesc">Material yuklash va boshqarish</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Ism</label>
+      <input type="text" id="regName" placeholder="To'liq ismingiz"/>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="regEmail" placeholder="email@example.com"/>
+    </div>
+    <div class="form-group">
+      <label>Parol</label>
+      <input type="password" id="regPass" placeholder="Kamida 6 belgi"/>
+    </div>
+    <div id="creatorCode" style="display:none;">
+      <div class="form-group">
+        <label>Maxfiy kod</label>
+        <input type="password" id="regCode" placeholder="Creator kodi"/>
+      </div>
+    </div>
+    <div id="regErr" class="err"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:0.5rem;" onclick="doRegister()">Ro'yxatdan o'tish</button>
+    <p style="text-align:center;margin-top:1rem;font-size:0.82rem;color:var(--muted);">Akkaunt bormi? <a href="#" style="color:var(--accent);" onclick="switchModal('registerModal','loginModal')">Kirish</a></p>
+  </div>
+</div>
+
+<!-- VIEW MODAL (PDF/PPT embed, link) -->
+<div class="overlay" id="viewModal">
+  <div class="modal pdf-modal">
+    <button class="modal-close" onclick="closeModal('viewModal')">✕</button>
+    <h2 id="viewTitle" style="margin-bottom:1rem;"></h2>
+    <iframe id="viewFrame" src=""></iframe>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───
+const SUPABASE_URL = https://rdjaoaacupvuzzrludgw.supabase.co;
+const SUPABASE_KEY = sb_secret_G5kr4T0SXwTaHxxLsOIpOA_XiNKOELT; // <-- yangi key qo'ying!
+const CREATOR_SECRET = 1629q1695w; // creator ro'yxatdan o'tish kodi
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── STATE ───
+let currentUser = null;
+let currentProfile = null;
+let allContents = [];
+let typeFilter = '';
+let langFilter = '';
+let searchQ = '';
+let selectedRole = 'user';
+
+// ─── INIT ───
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){ currentUser = session.user; await loadProfile(); updateNav(); }
+  loadContents();
+}
+
+async function loadProfile(){
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  currentProfile = data;
+}
+
+function updateNav(){
+  const nav = document.getElementById('navActions');
+  const name = currentProfile?.full_name || currentUser.email.split('@')[0];
+  const isAdmin = currentProfile?.role === 'admin' || currentProfile?.role === 'creator';
+  nav.innerHTML = `
+    <div class="user-badge">
+      <div class="avatar">${name[0].toUpperCase()}</div>
+      <span>${name}</span>
+    </div>
+    ${isAdmin ? `<a href="admin.html"><button class="btn btn-ghost">⚙️ Admin</button></a>` : ''}
+    <button class="btn btn-ghost" onclick="doLogout()">Chiqish</button>
+  `;
+}
+
+// ─── AUTH ───
+async function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if(error){ document.getElementById('loginErr').textContent = 'Email yoki parol xato'; return; }
+  const { data:{ session } } = await sb.auth.getSession();
+  currentUser = session.user;
+  await loadProfile();
+  updateNav();
+  closeModal('loginModal');
+  toast('Xush kelibsiz! 👋');
+}
+
+async function doRegister(){
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPass').value;
+  const code = document.getElementById('regCode').value.trim();
+  const errEl = document.getElementById('regErr');
+
+  if(!name || !email || !pass){ errEl.textContent = 'Barcha maydonlarni to\'ldiring'; return; }
+  if(pass.length < 6){ errEl.textContent = 'Parol kamida 6 belgi bo\'lishi kerak'; return; }
+  if(selectedRole === 'creator' && code !== CREATOR_SECRET){ errEl.textContent = 'Maxfiy kod noto\'g\'ri'; return; }
+
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
+  if(error){ errEl.textContent = error.message; return; }
+
+  const role = selectedRole === 'creator' ? 'creator' : 'user';
+  await sb.from('profiles').insert({ id: data.user.id, full_name: name, email, role });
+
+  currentUser = data.user;
+  currentProfile = { full_name: name, email, role };
+  updateNav();
+  closeModal('registerModal');
+  toast('Muvaffaqiyatli ro\'yxatdan o\'tdingiz! 🎉');
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  currentUser = null; currentProfile = null;
+  document.getElementById('navActions').innerHTML = `
+    <button class="btn btn-ghost" onclick="openModal('loginModal')">Kirish</button>
+    <button class="btn btn-primary" onclick="openModal('registerModal')">Ro'yxat</button>
+  `;
+  toast('Chiqildi');
+}
+
+function selectRole(role){
+  selectedRole = role;
+  document.getElementById('roleUser').classList.toggle('selected', role==='user');
+  document.getElementById('roleCreator').classList.toggle('selected', role==='creator');
+  document.getElementById('creatorCode').style.display = role==='creator'?'block':'none';
+}
+
+// ─── CONTENT ───
+async function loadContents(){
+  const { data, error } = await sb.from('contents').select('*').order('created_at', { ascending: false });
+  if(error){ console.error(error); return; }
+  allContents = data || [];
+  renderContents();
+}
+
+function renderContents(){
+  const grid = document.getElementById('contentGrid');
+  let items = allContents;
+
+  if(typeFilter) items = items.filter(c => c.type === typeFilter);
+  if(langFilter) items = items.filter(c => c.language === langFilter);
+  if(searchQ) items = items.filter(c =>
+    c.title.toLowerCase().includes(searchQ) ||
+    (c.description||'').toLowerCase().includes(searchQ) ||
+    (c.tags||'').toLowerCase().includes(searchQ)
+  );
+
+  if(!items.length){
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">📭</div><p>Hech narsa topilmadi</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = items.map(c => cardHTML(c)).join('');
+}
+
+function cardHTML(c){
+  const icons = { pdf:'📄', ppt:'📊', mp3:'🎵', link:'🔗' };
+  const labels = { pdf:'PDF', ppt:'PPT', mp3:'MP3', link:'Video Link' };
+  const langs = { uz:'🇺🇿', en:'🇬🇧', ru:'🇷🇺' };
+  return `
+  <div class="card" id="card-${c.id}">
+    <span class="card-type type-${c.type}">${icons[c.type]} ${labels[c.type]}</span>
+    <h3>${c.title}</h3>
+    <p>${c.description||''}</p>
+    <div class="card-meta">
+      <span class="card-lang">${langs[c.language]||''} ${c.language?.toUpperCase()||''}</span>
+      <div class="card-stats">
+        <span>👁 ${c.views||0}</span>
+        <span>❤️ ${c.likes||0}</span>
+      </div>
+    </div>
+    <div class="card-actions">
+      ${c.type==='link'
+        ? `<button class="btn-sm btn-view" onclick="openLink('${c.file_url}',${c.id})">🔗 Ochish</button>`
+        : c.type==='mp3'
+        ? `<button class="btn-sm btn-view" onclick="playAudio('${c.file_url}',${c.id})">▶ Tinglash</button>
+           <button class="btn-sm btn-dl" onclick="download('${c.file_url}','${c.title}',${c.id})">⬇ Yuklash</button>`
+        : `<button class="btn-sm btn-view" onclick="viewFile('${c.file_url}','${c.title}',${c.id})">👁 Ko'rish</button>
+           <button class="btn-sm btn-dl" onclick="download('${c.file_url}','${c.title}',${c.id})">⬇ Yuklash</button>`
+      }
+      <button class="like-btn" onclick="likeContent(${c.id},this)">❤ Like</button>
+    </div>
+    ${c.type==='mp3'?`<div class="audio-player" id="audio-${c.id}"><audio controls src="${c.file_url}"></audio></div>`:''}
+  </div>`;
+}
+
+async function incrementView(id){
+  await sb.rpc('increment_views', { content_id: id });
+}
+
+async function likeContent(id, btn){
+  if(!currentUser){ toast('Like bosish uchun kiring'); return; }
+  btn.classList.toggle('liked');
+  await sb.rpc('toggle_like', { content_id: id, user_uuid: currentUser.id });
+  loadContents();
+}
+
+function openLink(url, id){
+  incrementView(id);
+  window.open(url, '_blank');
+}
+
+function playAudio(url, id){
+  incrementView(id);
+  const el = document.getElementById(`audio-${id}`);
+  el.style.display = el.style.display==='block'?'none':'block';
+}
+
+function viewFile(url, title, id){
+  incrementView(id);
+  document.getElementById('viewTitle').textContent = title;
+  document.getElementById('viewFrame').src = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+  openModal('viewModal');
+}
+
+function download(url, title, id){
+  if(!currentUser){ toast('Yuklash uchun ro\'yxatdan o\'ting'); openModal('registerModal'); return; }
+  incrementView(id);
+  const a = document.createElement('a'); a.href=url; a.download=title; a.target='_blank'; a.click();
+}
+
+// ─── FILTERS ───
+function setTypeFilter(btn, val){
+  typeFilter = val;
+  document.querySelectorAll('[data-type]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderContents();
+}
+function setLangFilter(btn, val){
+  langFilter = val;
+  document.querySelectorAll('[data-lang]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderContents();
+}
+function handleSearch(){
+  searchQ = document.getElementById('searchInput').value.trim().toLowerCase();
+  renderContents();
+}
+
+// ─── FEEDBACK ───
+async function submitFeedback(){
+  const name = document.getElementById('fbName').value.trim();
+  const text = document.getElementById('fbText').value.trim();
+  if(!text){ document.getElementById('fbMsg').textContent='Xabar yozing'; return; }
+  const { error } = await sb.from('feedbacks').insert({ name, message: text });
+  if(error){ document.getElementById('fbMsg').textContent='Xatolik yuz berdi'; return; }
+  document.getElementById('fbText').value='';
+  document.getElementById('fbMsg').textContent='✅ Rahmat! Xabaringiz yuborildi.';
+  setTimeout(()=>document.getElementById('fbMsg').textContent='',3000);
+}
+
+// ─── MODAL ───
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function switchModal(from,to){ closeModal(from); openModal(to); }
+document.querySelectorAll('.overlay').forEach(el=>{
+  el.addEventListener('click',e=>{ if(e.target===el) el.classList.remove('open'); });
+});
+
+// ─── TOAST ───
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+init();
+</script>
+</body>
+</html>
